@@ -5,6 +5,7 @@ import { OpenAPIV3 } from 'openapi-types';
 const testsDir = path.join(__dirname, '..', '__tests__');
 const examplePetAPIJSON = path.join(testsDir, 'resources', 'example-pet-api.openapi.json');
 const examplePetAPIYAML = path.join(testsDir, 'resources', 'example-pet-api.openapi.yml');
+const refsAPIJSON = path.join(testsDir, 'resources', 'refs.openapi.json');
 
 const responses: OpenAPIV3.ResponsesObject = {
   200: { description: 'ok' },
@@ -103,7 +104,17 @@ describe('OpenAPIBackend', () => {
     await api.init();
     expect(api.initalized).toEqual(true);
     expect(api.router.getOperations()).toHaveLength(8);
+	});
+	
+  test('can consume circular references', async () => {
+    // @TODO: read a complex document with as many features as possible here
+		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });
+		
+    await api.init();
+    expect(api.initalized).toEqual(true);
+    // expect(api.router.getOperations()).toHaveLength(8);
   });
+
 
   test('can be initalised using a valid JSON file', async () => {
     // @TODO: read a complex document with as many features as possible here

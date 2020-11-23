@@ -4,6 +4,8 @@ import { OpenAPIV3 } from 'openapi-types';
 import { OpenAPIRouter, Request, Operation } from './router';
 import OpenAPIUtils from './utils';
 import { SetMatchType } from './backend';
+import { $Refs } from '@apidevtools/swagger-parser';
+import ajv = require('ajv');
 
 // alias Document to OpenAPIV3.Document
 type Document = OpenAPIV3.Document;
@@ -136,6 +138,7 @@ export class OpenAPIValidator {
   public responseHeadersValidators: { [operationId: string]: ResponseHeadersValidateFunctionMap };
 
   public router: OpenAPIRouter;
+  public $refs: $Refs | undefined;
 
   /**
    * Creates an instance of OpenAPIValidation
@@ -151,7 +154,9 @@ export class OpenAPIValidator {
     ajvOpts?: Ajv.Options;
     router?: OpenAPIRouter;
     customizeAjv?: AjvCustomizer;
+    $refs?: $Refs
   }) {
+    this.$refs = opts.$refs;
     this.definition = opts.definition;
     this.ajvOpts = {
       unknownFormats: 'ignore', // Ajv default behaviour is to throw an error when encountering an unknown format
@@ -438,6 +443,46 @@ export class OpenAPIValidator {
     return ajv;
   }
 
+	/**
+	 * Compiles a schema with an Ajv instance, adding reference schemas to the Ajv instance
+	 * @param ajv Ajv instance to compile with
+	 * @param schema Schema to compile
+	 */
+  private compileSchema(ajv: Ajv.Ajv, schema: any){
+		let schemaToCompile = schema;
+		if(this.$refs){
+			// console.log(this.$refs.get(''));
+			const refSchemas = this.$refs.values();
+
+			// Find base schema key so we can add other keys
+			let baseSchema = this.$refs.get('');
+			let baseSchemaKey = '';
+			for(const key in refSchemas){
+				const refSchema = refSchemas[key];
+				if(refSchema === baseSchema){
+					baseSchemaKey = key;
+					break;
+				}
+			}
+
+			for(const key in refSchemas){
+				const refSchema = refSchemas[key];
+				if(key !== baseSchemaKey){
+					const ajvKey = key.replace(baseSchemaKey, '');
+					ajv.removeSchema(ajvKey);
+					ajv.addSchema(refSchema, ajvKey);
+				}
+			}
+			if(this.$refs.exists('#/components')){
+				schemaToCompile = {
+					...schema,
+					components: this.$refs.get('#/components')
+				}
+			}
+    }
+		return ajv.compile(schemaToCompile);
+  }
+
   /**
    * Builds Ajv request validation functions for an operation and registers them to requestValidators
    *
@@ -456,8 +501,11 @@ export class OpenAPIValidator {
 
     // schema for operation requestBody
     if (operation.requestBody) {
-      const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject;
-      const jsonbody = requestBody.content['application/json'];
+			const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject & OpenAPIV3.ReferenceObject; 
+			if(!requestBody.$ref){
+			}
+			console.log(requestBody);
+      const jsonbody = requestBody.$ref ? requestBody.$ref : requestBody.content['application/json'];
       if (jsonbody && jsonbody.schema) {
         const requestBodySchema: InputValidationSchema = {
           title: 'Request',
@@ -474,8 +522,8 @@ export class OpenAPIValidator {
         }
 
         // add compiled params schema to schemas for this operation id
-        const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
-        validators.push(requestBodyValidator.compile(requestBodySchema));
+				const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
+        validators.push(this.compileSchema(requestBodyValidator, requestBodySchema));
       }
     }
 
@@ -534,7 +582,7 @@ export class OpenAPIValidator {
 
     // add compiled params schema to requestValidators for this operation id
     const paramsValidator = this.getAjv(ValidationContext.Params, { coerceTypes: true });
-    validators.push(paramsValidator.compile(paramsSchema));
+		validators.push(this.compileSchema(paramsValidator, paramsSchema));
     this.requestValidators[operationId] = validators;
   }
 
@@ -584,7 +632,7 @@ export class OpenAPIValidator {
     // compile the validator function and register to responseValidators
     const schema = { oneOf: responseSchemas };
     const responseValidator = this.getAjv(ValidationContext.Response);
-    this.responseValidators[operationId] = responseValidator.compile(schema);
+    this.responseValidators[operationId] = this.compileSchema(responseValidator, schema);
   }
 
   /**
@@ -622,7 +670,7 @@ export class OpenAPIValidator {
       const response = res as OpenAPIV3.ResponseObject;
       if (response.content && response.content['application/json'] && response.content['application/json'].schema) {
         const validateFn = response.content['application/json'].schema;
-        responseValidators[status] = validator.compile(validateFn);
+        responseValidators[status] = this.compileSchema(validator, validateFn);
       }
       return null;
     });
@@ -677,7 +725,7 @@ export class OpenAPIValidator {
         return null;
       });
 
-      validateFns[SetMatchType.Any] = validator.compile({
+      validateFns[SetMatchType.Any] = this.compileSchema(validator, ({
         type: 'object',
         properties: {
           headers: {
@@ -687,9 +735,9 @@ export class OpenAPIValidator {
             required: [],
           },
         },
-      });
+      }));
 
-      validateFns[SetMatchType.Superset] = validator.compile({
+      validateFns[SetMatchType.Superset] = this.compileSchema(validator, ({
         type: 'object',
         properties: {
           headers: {
@@ -699,9 +747,9 @@ export class OpenAPIValidator {
             required,
           },
         },
-      });
+      }));
 
-      validateFns[SetMatchType.Subset] = validator.compile({
+      validateFns[SetMatchType.Subset] = this.compileSchema(validator, ({
         type: 'object',
         properties: {
           headers: {
@@ -711,9 +759,9 @@ export class OpenAPIValidator {
             required: [],
           },
         },
-      });
+      }));
 
-      validateFns[SetMatchType.Exact] = validator.compile({
+      validateFns[SetMatchType.Exact] = this.compileSchema(validator, ({
         type: 'object',
         properties: {
           headers: {
@@ -723,7 +771,7 @@ export class OpenAPIValidator {
             required,
           },
         },
-      });
+      }));
 
       headerValidators[status] = validateFns;
       return null;

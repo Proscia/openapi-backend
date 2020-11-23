@@ -1,9 +1,11 @@
 import * as _ from 'lodash';
 import * as Ajv from 'ajv';
 import OpenAPISchemaValidator from 'openapi-schema-validator';
-import * as SwaggerParser from 'swagger-parser';
+// import * as SwaggerParser from 'swagger-parser';
 import { OpenAPIV3 } from 'openapi-types';
 import { mock } from 'mock-json-schema';
+// const SP = import('@apidevtools/swagger-parser');
+import * as SwaggerParser from '@apidevtools/swagger-parser';
 
 import { OpenAPIRouter, Request, ParsedRequest, Operation } from './router';
 import { OpenAPIValidator, ValidationResult, AjvCustomizer } from './validation';
@@ -116,8 +118,9 @@ export class OpenAPIBackend {
   public securityHandlers: { [name: string]: Handler };
 
   public router: OpenAPIRouter;
-  public validator: OpenAPIValidator;
-
+	public validator: OpenAPIValidator;
+	public parser: SwaggerParser;
+	public $refs: SwaggerParser.$Refs;
   /**
    * Creates an instance of OpenAPIBackend.
    *
@@ -150,7 +153,7 @@ export class OpenAPIBackend {
     this.handlers = { ...optsWithDefaults.handlers }; // Copy to avoid mutating passed object
     this.securityHandlers = { ...optsWithDefaults.securityHandlers }; // Copy to avoid mutating passed object
     this.ajvOpts = optsWithDefaults.ajvOpts;
-    this.customizeAjv = optsWithDefaults.customizeAjv;
+		this.customizeAjv = optsWithDefaults.customizeAjv;
   }
 
   /**
@@ -169,6 +172,7 @@ export class OpenAPIBackend {
    */
   public async init() {
     try {
+			this.parser = new SwaggerParser(); 
       // parse the document
       if (this.quick) {
         // in quick mode we don't care when the document is ready
@@ -182,12 +186,30 @@ export class OpenAPIBackend {
         this.validateDefinition();
       }
 
+			let $refs = null;
       // dereference the document into definition (make sure not to copy)
       if (typeof this.inputDocument === 'string') {
-        this.definition = await SwaggerParser.dereference(this.inputDocument, this.document || this.inputDocument);
+        $refs = await this.parser.resolve(this.document || this.inputDocument);
       } else {
-        this.definition = await SwaggerParser.dereference(this.document || this.inputDocument);
-      }
+        $refs = await this.parser.resolve(this.document || this.inputDocument);
+			}
+			this.definition = this.document;
+			this.$refs = $refs;
+			if(this.document.info.title === 'Circular Refs'){
+				if(this.document){
+					console.log(this.document.paths['/items']?.get?.parameters);
+				}
+				console.log(this.parser.api.paths['/items'].get.parameters);
+				console.log(this.parser.$refs);
+				
+				// console.log(doc);
+				// const resolved = await this.parser.resolve(this.document);
+				// console.log(resolved)
+			}
+
+			// const p = new SwaggerParser();
+			// let bundled = await p.bundle(this.document || this.inputDocument);
+			// console.log(bundled);
     } catch (err) {
       if (this.strict) {
         // in strict-mode, fail hard and re-throw the error
@@ -204,6 +226,7 @@ export class OpenAPIBackend {
     // initalize validator with dereferenced definition
     if (this.validate !== false) {
       this.validator = new OpenAPIValidator({
+				$refs: this.$refs,
         definition: this.definition,
         ajvOpts: this.ajvOpts,
         customizeAjv: this.customizeAjv,
@@ -236,7 +259,10 @@ export class OpenAPIBackend {
    * @memberof OpenAPIBackend
    */
   public async loadDocument() {
-    this.document = await SwaggerParser.parse(this.inputDocument);
+		// console.log(this.inputDocument);
+		this.document = (await this.parser.parse(this.inputDocument)) as OpenAPIV3.Document;
+		// console.log(JSON.stringify(this.document));
+
     return this.document;
   }
 
