@@ -498,33 +498,34 @@ export class OpenAPIValidator {
 
     // validator functions for this operation
     const validators: Ajv.ValidateFunction[] = [];
+		const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
 
     // schema for operation requestBody
     if (operation.requestBody) {
 			const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject & OpenAPIV3.ReferenceObject; 
-			if(!requestBody.$ref){
+			let validateFunction: Ajv.ValidateFunction;
+			if(requestBody.$ref){
+				validateFunction = this.compileSchema(requestBodyValidator, requestBody.$ref);
+			}else{
+				const jsonbody = requestBody.content['application/json'];
+				const requestBodySchema: InputValidationSchema = {
+					title: 'Request',
+					type: 'object',
+					additionalProperties: true,
+					properties: {
+						requestBody: jsonbody.schema as OpenAPIV3.SchemaObject,
+					},
+				};
+				requestBodySchema.required = [];
+				if (_.keys(requestBody.content).length === 1) {
+					// if application/json is the only specified format, it's required
+					requestBodySchema.required.push('requestBody');
+				}
+				// add compiled params schema to schemas for this operation id
+				validateFunction = this.compileSchema(requestBodyValidator, requestBodySchema);
+			
 			}
-			console.log(requestBody);
-      const jsonbody = requestBody.$ref ? requestBody.$ref : requestBody.content['application/json'];
-      if (jsonbody && jsonbody.schema) {
-        const requestBodySchema: InputValidationSchema = {
-          title: 'Request',
-          type: 'object',
-          additionalProperties: true,
-          properties: {
-            requestBody: jsonbody.schema as OpenAPIV3.SchemaObject,
-          },
-        };
-        requestBodySchema.required = [];
-        if (_.keys(requestBody.content).length === 1) {
-          // if application/json is the only specified format, it's required
-          requestBodySchema.required.push('requestBody');
-        }
-
-        // add compiled params schema to schemas for this operation id
-				const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
-        validators.push(this.compileSchema(requestBodyValidator, requestBodySchema));
-      }
+			validators.push(validateFunction)
     }
 
     // schema for operation parameters in: path,query,header,cookie
