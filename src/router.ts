@@ -4,10 +4,7 @@ import bath from 'bath-es5';
 import * as cookie from 'cookie';
 import { parse as parseQuery } from 'qs';
 import { Parameters } from 'bath-es5/_/types';
-
-// alias Document to OpenAPIV3.Document
-type Document = OpenAPIV3.Document;
-
+import { OpenAPIDefinition } from './definition';
 /**
  * OAS Operation Object containing the path and method so it can be placed in a flat array of operations
  *
@@ -54,19 +51,23 @@ export interface ParsedRequest extends Request {
  * @class OpenAPIRouter
  */
 export class OpenAPIRouter {
-  public definition: Document;
+
+	public definition: OpenAPIDefinition;
   public apiRoot: string;
 
   /**
    * Creates an instance of OpenAPIRouter
    *
    * @param opts - constructor options
-   * @param {Document} opts.definition - the OpenAPI definition, file path or Document object
+   * @param {OpenAPIDefinition} opts.definition - the initialized OpenAPI definition.
    * @param {string} opts.apiRoot - the root URI of the api. all paths are matched relative to apiRoot
    * @memberof OpenAPIRouter
    */
-  constructor(opts: { definition: Document; apiRoot?: string }) {
-    this.definition = opts.definition;
+  constructor(opts: { 
+		definition: OpenAPIDefinition; 
+		apiRoot?: string;
+	}) {
+		this.definition = opts.definition;
     this.apiRoot = opts.apiRoot || '/';
   }
 
@@ -142,12 +143,13 @@ export class OpenAPIRouter {
 
   /**
    * Flattens operations into a simple array of Operation objects easy to work with
-   *
+   * @param {boolean} dereferenced Use the dereferenced version of the API definitions. Defaults to false.
    * @returns {Operation[]}
    * @memberof OpenAPIRouter
    */
-  public getOperations(): Operation[] {
-    const paths = _.get(this.definition, 'paths', {});
+  public getOperations(dereferenced: boolean = false): Operation[] {
+		const definition = dereferenced ? this.definition.document : this.definition.document;
+    const paths = _.get(definition, 'paths', {});
     return _.chain(paths)
       .entries()
       .flatMap(([path, pathBaseObject]) => {
@@ -164,7 +166,7 @@ export class OpenAPIRouter {
               ...((pathBaseObject.parameters as OpenAPIV3.ParameterObject[]) || []), // path base object parameters
             ],
             // operation-specific security requirement override global requirements
-            security: op.security || this.definition.security || [],
+            security: op.security || definition.security || [],
           };
         });
       })
@@ -175,11 +177,12 @@ export class OpenAPIRouter {
    * Gets a single operation based on operationId
    *
    * @param {string} operationId
+   * @param {boolean} dereferenced Use the dereferenced version of the API definitions. Defaults to false.
    * @returns {Operation}
    * @memberof OpenAPIRouter
    */
-  public getOperation(operationId: string): Operation | undefined {
-    return _.find(this.getOperations(), { operationId });
+  public getOperation(operationId: string, dereferenced: boolean = false): Operation | undefined {
+    return _.find(this.getOperations(dereferenced), { operationId });
   }
 
   /**

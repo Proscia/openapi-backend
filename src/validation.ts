@@ -5,10 +5,8 @@ import { OpenAPIRouter, Request, Operation } from './router';
 import OpenAPIUtils from './utils';
 import { SetMatchType } from './backend';
 import { $Refs } from '@apidevtools/swagger-parser';
+import { OpenAPIDefinition } from './definition';
 import ajv = require('ajv');
-
-// alias Document to OpenAPIV3.Document
-type Document = OpenAPIV3.Document;
 
 /**
  * The output object for validationRequest. Contains the results for validation
@@ -128,7 +126,7 @@ const defaultFormats: Record<string, Ajv.FormatDefinition> = {
  * @class OpenAPIValidator
  */
 export class OpenAPIValidator {
-  public definition: Document;
+  public definition: OpenAPIDefinition;
   public ajvOpts: Ajv.Options;
   public customizeAjv: AjvCustomizer | undefined;
 
@@ -144,13 +142,13 @@ export class OpenAPIValidator {
    * Creates an instance of OpenAPIValidation
    *
    * @param opts - constructor options
-   * @param {Document | string} opts.definition - the OpenAPI definition, file path or Document object
+   * @param {OpenAPIDefinition} opts.definition - the OpenAPI definition, initialized 
    * @param {boolean} opts.ajvOpts - default ajv constructor opts (default: { unknownFormats: 'ignore' })
    * @param {OpenAPIRouter} opts.router - passed instance of OpenAPIRouter. Will create own child if no passed
    * @memberof OpenAPIRequestValidator
    */
   constructor(opts: {
-    definition: Document;
+    definition: OpenAPIDefinition;
     ajvOpts?: Ajv.Options;
     router?: OpenAPIRouter;
     customizeAjv?: AjvCustomizer;

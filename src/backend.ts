@@ -1,15 +1,13 @@
 import * as _ from 'lodash';
 import * as Ajv from 'ajv';
-import OpenAPISchemaValidator from 'openapi-schema-validator';
-// import * as SwaggerParser from 'swagger-parser';
 import { OpenAPIV3 } from 'openapi-types';
 import { mock } from 'mock-json-schema';
-// const SP = import('@apidevtools/swagger-parser');
-import * as SwaggerParser from '@apidevtools/swagger-parser';
 
 import { OpenAPIRouter, Request, ParsedRequest, Operation } from './router';
 import { OpenAPIValidator, ValidationResult, AjvCustomizer } from './validation';
 import OpenAPIUtils from './utils';
+
+import { OpenAPIDefinition, Options as OpenAPIDefinitionOptions } from './definition';
 
 // alias Document to OpenAPIV3.Document
 export type Document = OpenAPIV3.Document;
@@ -64,10 +62,7 @@ export enum SetMatchType {
  * @interface Options
  */
 export interface Options {
-  definition: Document | string;
   apiRoot?: string;
-  strict?: boolean;
-  quick?: boolean;
   validate?: boolean | BoolPredicate;
   ajvOpts?: Ajv.Options;
   customizeAjv?: AjvCustomizer;
@@ -87,15 +82,9 @@ export interface Options {
  * @class OpenAPIBackend
  */
 export class OpenAPIBackend {
-  public document: Document;
-  public inputDocument: Document | string;
-  public definition: Document;
+
   public apiRoot: string;
-
   public initalized: boolean;
-
-  public strict: boolean;
-  public quick: boolean;
   public validate: boolean | BoolPredicate;
 
   public ajvOpts: Ajv.Options;
@@ -119,36 +108,34 @@ export class OpenAPIBackend {
 
   public router: OpenAPIRouter;
 	public validator: OpenAPIValidator;
-	public parser: SwaggerParser;
-	public $refs: SwaggerParser.$Refs;
+
+	public definition: OpenAPIDefinition;
+
   /**
    * Creates an instance of OpenAPIBackend.
    *
-   * @param opts - constructor options
-   * @param {Document | string} opts.definition - the OpenAPI definition, file path or Document object
+   * @param {Object | OpenAPIDefinitionOptions} opts - constructor options
    * @param {string} opts.apiRoot - the root URI of the api. all paths are matched relative to apiRoot
-   * @param {boolean} opts.strict - strict mode, throw errors or warn on OpenAPI spec validation errors (default: false)
-   * @param {boolean} opts.quick - quick startup, attempts to optimise startup; might break things (default: false)
    * @param {boolean} opts.validate - whether to validate requests with Ajv (default: true)
    * @param {boolean} opts.ajvOpts - default ajv opts to pass to the validator
    * @param {{ [operationId: string]: Handler | ErrorHandler }} opts.handlers - Operation handlers to be registered
    * @memberof OpenAPIBackend
    */
-  constructor(opts: Options) {
+  constructor(opts: Options & OpenAPIDefinitionOptions) {
     const optsWithDefaults = {
       apiRoot: '/',
       validate: true,
-      strict: false,
-      quick: false,
       ajvOpts: {},
       handlers: {},
       securityHandlers: {},
       ...opts,
     };
-    this.apiRoot = optsWithDefaults.apiRoot;
-    this.inputDocument = optsWithDefaults.definition;
-    this.strict = optsWithDefaults.strict;
-    this.quick = optsWithDefaults.quick;
+		this.apiRoot = optsWithDefaults.apiRoot;
+		this.definition = new OpenAPIDefinition({
+			definition: opts.definition,
+			strict: optsWithDefaults.strict,
+			quick: optsWithDefaults.quick
+		});
     this.validate = optsWithDefaults.validate;
     this.handlers = { ...optsWithDefaults.handlers }; // Copy to avoid mutating passed object
     this.securityHandlers = { ...optsWithDefaults.securityHandlers }; // Copy to avoid mutating passed object
@@ -171,62 +158,13 @@ export class OpenAPIBackend {
    * @memberof OpenAPIBackend
    */
   public async init() {
-    try {
-			this.parser = new SwaggerParser(); 
-      // parse the document
-      if (this.quick) {
-        // in quick mode we don't care when the document is ready
-        this.loadDocument();
-      } else {
-        await this.loadDocument();
-      }
 
-      if (!this.quick) {
-        // validate the document
-        this.validateDefinition();
-      }
+		await this.definition.init();
 
-			let $refs = null;
-      // dereference the document into definition (make sure not to copy)
-      if (typeof this.inputDocument === 'string') {
-        $refs = await this.parser.resolve(this.document || this.inputDocument);
-      } else {
-        $refs = await this.parser.resolve(this.document || this.inputDocument);
-			}
-			this.definition = this.document;
-			this.$refs = $refs;
-			if(this.document.info.title === 'Circular Refs'){
-				if(this.document){
-					console.log(this.document.paths['/items']?.get?.parameters);
-				}
-				console.log(this.parser.api.paths['/items'].get.parameters);
-				console.log(this.parser.$refs);
-				
-				// console.log(doc);
-				// const resolved = await this.parser.resolve(this.document);
-				// console.log(resolved)
-			}
-
-			// const p = new SwaggerParser();
-			// let bundled = await p.bundle(this.document || this.inputDocument);
-			// console.log(bundled);
-    } catch (err) {
-      if (this.strict) {
-        // in strict-mode, fail hard and re-throw the error
-        throw err;
-      } else {
-        // just emit a warning about the validation errors
-        console.warn(err);
-      }
-    }
-
-    // initalize router with dereferenced definition
     this.router = new OpenAPIRouter({ definition: this.definition, apiRoot: this.apiRoot });
 
-    // initalize validator with dereferenced definition
     if (this.validate !== false) {
       this.validator = new OpenAPIValidator({
-				$refs: this.$refs,
         definition: this.definition,
         ajvOpts: this.ajvOpts,
         customizeAjv: this.customizeAjv,
@@ -253,18 +191,7 @@ export class OpenAPIBackend {
     return this;
   }
 
-  /**
-   * Loads the input document asynchronously and sets this.document
-   *
-   * @memberof OpenAPIBackend
-   */
-  public async loadDocument() {
-		// console.log(this.inputDocument);
-		this.document = (await this.parser.parse(this.inputDocument)) as OpenAPIV3.Document;
-		// console.log(JSON.stringify(this.document));
 
-    return this.document;
-  }
 
   /**
    * Handles a request
@@ -440,7 +367,7 @@ export class OpenAPIBackend {
       if (!operation && !_.includes(this.allowedHandlers, operationId)) {
         const err = `Unknown operationId ${operationId}`;
         // in strict mode, throw Error, otherwise just emit a warning
-        if (this.strict) {
+        if (this.definition.strict) {
           throw new Error(`${err}. Refusing to register handler`);
         } else {
           console.warn(err);
@@ -509,11 +436,12 @@ export class OpenAPIBackend {
 
     // if initialized, check that operation matches a security scheme
     if (this.initalized) {
-      const securitySchemes = this.definition.components?.securitySchemes || {};
+			console.log(this.definition)
+      const securitySchemes = this.definition.documentDereferenced.components?.securitySchemes || {};
       if (!securitySchemes[name]) {
         const err = `Unknown security scheme ${name}`;
         // in strict mode, throw Error, otherwise just emit a warning
-        if (this.strict) {
+        if (this.definition.strict) {
           throw new Error(`${err}. Refusing to register security handler`);
         } else {
           console.warn(err);
@@ -547,7 +475,8 @@ export class OpenAPIBackend {
     let status = 200;
     const defaultMock = {};
 
-    const operation = this.router.getOperation(operationId);
+		const operation = this.router.getOperation(operationId, true);
+		console.log(operation);
     if (!operation || !operation.responses) {
       return { status, mock: defaultMock };
     }
@@ -566,7 +495,7 @@ export class OpenAPIBackend {
       status = res.status;
       response = res.res;
     }
-
+		console.log(response)
     if (!response || !response.content) {
       return { status, mock: defaultMock };
     }
@@ -600,7 +529,7 @@ export class OpenAPIBackend {
       const exampleObject = examples[Object.keys(examples)[0]] as OpenAPIV3.ExampleObject;
       return { status, mock: exampleObject.value };
     }
-
+		console.log(schema)
     // mock using json schema
     if (schema) {
       return { status, mock: mock(schema as OpenAPIV3.SchemaObject) };
@@ -608,22 +537,6 @@ export class OpenAPIBackend {
 
     // we should never get here, schema or an example must be provided
     return { status, mock: defaultMock };
-  }
-
-  /**
-   * Validates this.document, which is the parsed OpenAPI document. Throws an error if validation fails.
-   *
-   * @returns {Document} parsed document
-   * @memberof OpenAPIBackend
-   */
-  public validateDefinition() {
-    const validateOpenAPI = new OpenAPISchemaValidator({ version: 3 });
-    const { errors } = validateOpenAPI.validate(this.document);
-    if (errors.length) {
-      const prettyErrors = JSON.stringify(errors, null, 2);
-      throw new Error(`Document is not valid OpenAPI. ${errors.length} validation errors:\n${prettyErrors}`);
-    }
-    return this.document;
   }
 
   /**

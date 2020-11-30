@@ -164,7 +164,7 @@ describe('OpenAPIBackend', () => {
 
   describe('.register', () => {
     const api = new OpenAPIBackend({ definition });
-    beforeAll(() => api.init());
+    beforeAll(async () => await api.init());
 
     const dummyHandler = jest.fn();
 
@@ -179,7 +179,7 @@ describe('OpenAPIBackend', () => {
     });
 
     test('emits a warning when registering a handler for unknown operationId not in strict mode', async () => {
-      api.strict = false;
+      api.definition.strict = false;
       const warn = console.warn;
       console.warn = jest.fn();
       api.register('getHumans', dummyHandler);
@@ -189,7 +189,7 @@ describe('OpenAPIBackend', () => {
     });
 
     test('refuses to register a handler for unknown operationId when in strict mode', async () => {
-      api.strict = true;
+      api.definition.strict = true;
       expect(() => api.register('getAliens', dummyHandler)).toThrowError();
       expect(api.handlers['getAliens']).not.toBe(dummyHandler);
     });
@@ -209,8 +209,9 @@ describe('OpenAPIBackend', () => {
   });
 
   describe('.registerSecurityHandler', () => {
-    const api = new OpenAPIBackend({ definition });
-    beforeAll(() => api.init());
+		const api = new OpenAPIBackend({ definition });
+		
+    beforeAll(async () => await api.init());
 
     const dummyHandler = jest.fn();
 
@@ -220,7 +221,7 @@ describe('OpenAPIBackend', () => {
     });
 
     test('refuses to register a handler for an unknown security scheme in strict mode', async () => {
-      api.strict = true;
+      api.definition.strict = true;
       expect(() => api.registerSecurityHandler('unknown', dummyHandler)).toThrowError();
       expect(api.securityHandlers['unknown']).not.toBe(dummyHandler);
     });
@@ -296,7 +297,7 @@ describe('OpenAPIBackend', () => {
 
     describe('auth', () => {
       test('calls registered security handlers', async () => {
-        const api = new OpenAPIBackend({ definition });
+				const api = new OpenAPIBackend({ definition });
         api.register('notImplemented', () => 'dummyResponse');
 
         const dummyHandler = jest.fn(() => 'dummyResponse');
