@@ -87,36 +87,36 @@ const defaultFormats: Record<string, Ajv.FormatDefinition> = {
   int32: {
     // signed 32 bits
     type: 'number',
-    validate: getBitRangeValidator(32)
+    validate: getBitRangeValidator(32),
   },
   int64: {
     // signed 64 bits (a.k.a long)
     type: 'number',
-    validate: getBitRangeValidator(64)
+    validate: getBitRangeValidator(64),
   },
   float: {
     type: 'number',
-    validate: () => true
+    validate: () => true,
   },
   double: {
     type: 'number',
-    validate: () => true
+    validate: () => true,
   },
   byte: {
     // base64 encoded characters
     type: 'string',
-    validate: /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
+    validate: /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,
   },
   binary: {
     // any sequence of octets
     type: 'string',
-    validate: () => true
+    validate: () => true,
   },
   password: {
     // A hint to UIs to obscure input.
     type: 'string',
-    validate: () => true
-  }
+    validate: () => true,
+  },
 };
 
 /**
@@ -141,7 +141,7 @@ export class OpenAPIValidator {
    * Creates an instance of OpenAPIValidation
    *
    * @param opts - constructor options
-   * @param {OpenAPIDefinition} opts.definition - the OpenAPI definition, initialized 
+   * @param {OpenAPIDefinition} opts.definition - the OpenAPI definition, initialized
    * @param {boolean} opts.ajvOpts - default ajv constructor opts (default: { unknownFormats: 'ignore' })
    * @param {OpenAPIRouter} opts.router - passed instance of OpenAPIRouter. Will create own child if no passed
    * @memberof OpenAPIRequestValidator
@@ -438,42 +438,42 @@ export class OpenAPIValidator {
     return ajv;
   }
 
-	/**
-	 * Compiles a schema with an Ajv instance, adding reference schemas to the Ajv instance
-	 * @param ajv Ajv instance to compile with
-	 * @param schema Schema to compile
-	 */
-  private compileSchema(ajv: Ajv.Ajv, schema: any){
-		let schemaToCompile = schema;
-		const refSchemas = this.definition.$refs.values();
+  /**
+   * Compiles a schema with an Ajv instance, adding reference schemas to the Ajv instance
+   * @param ajv Ajv instance to compile with
+   * @param schema Schema to compile
+   */
+  private compileSchema(ajv: Ajv.Ajv, schema: any) {
+    let schemaToCompile = schema;
+    const refSchemas = this.definition.$refs.values();
 
-		// Find base schema key so we can add other keys
-		let baseSchema = this.definition.$refs.get('');
-		let baseSchemaKey = '';
-		for(const key in refSchemas){
-			const refSchema = refSchemas[key];
-			if(refSchema === baseSchema){
-				baseSchemaKey = key;
-				break;
-			}
-		}
+    // Find base schema key so we can add other keys
+    let baseSchema = this.definition.$refs.get('');
+    let baseSchemaKey = '';
+    for (const key in refSchemas) {
+      const refSchema = refSchemas[key];
+      if (refSchema === baseSchema) {
+        baseSchemaKey = key;
+        break;
+      }
+    }
 
-		for(const key in refSchemas){
-			const refSchema = refSchemas[key];
-			if(key !== baseSchemaKey){
-				const ajvKey = key.replace(baseSchemaKey, '');
-				ajv.removeSchema(ajvKey);
-				ajv.addSchema(refSchema, ajvKey);
-			}
-		}
-		if(this.definition.$refs.exists('#/components')){
-			schemaToCompile = {
-				...schema,
-				components: this.definition.$refs.get('#/components')
-			}
-		}
-	
-		return ajv.compile(schemaToCompile);
+    for (const key in refSchemas) {
+      const refSchema = refSchemas[key];
+      if (key !== baseSchemaKey) {
+        const ajvKey = key.replace(baseSchemaKey, '');
+        ajv.removeSchema(ajvKey);
+        ajv.addSchema(refSchema, ajvKey);
+      }
+    }
+    if (this.definition.$refs.exists('#/components')) {
+      schemaToCompile = {
+        ...schema,
+        components: this.definition.$refs.get('#/components'),
+      };
+    }
+
+    return ajv.compile(schemaToCompile);
   }
 
   /**
@@ -491,34 +491,33 @@ export class OpenAPIValidator {
 
     // validator functions for this operation
     const validators: Ajv.ValidateFunction[] = [];
-		const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
+    const requestBodyValidator = this.getAjv(ValidationContext.RequestBody);
 
     // schema for operation requestBody
     if (operation.requestBody) {
-			const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject & OpenAPIV3.ReferenceObject; 
-			let validateFunction: Ajv.ValidateFunction;
-			if(requestBody.$ref){
-				validateFunction = this.compileSchema(requestBodyValidator, requestBody.$ref);
-			}else{
-				const jsonbody = requestBody.content['application/json'];
-				const requestBodySchema: InputValidationSchema = {
-					title: 'Request',
-					type: 'object',
-					additionalProperties: true,
-					properties: {
-						requestBody: jsonbody.schema as OpenAPIV3.SchemaObject,
-					},
-				};
-				requestBodySchema.required = [];
-				if (_.keys(requestBody.content).length === 1) {
-					// if application/json is the only specified format, it's required
-					requestBodySchema.required.push('requestBody');
-				}
-				// add compiled params schema to schemas for this operation id
-				validateFunction = this.compileSchema(requestBodyValidator, requestBodySchema);
-			
-			}
-			validators.push(validateFunction)
+      const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject & OpenAPIV3.ReferenceObject;
+      let validateFunction: Ajv.ValidateFunction;
+      if (requestBody.$ref) {
+        validateFunction = this.compileSchema(requestBodyValidator, requestBody.$ref);
+      } else {
+        const jsonbody = requestBody.content['application/json'];
+        const requestBodySchema: InputValidationSchema = {
+          title: 'Request',
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            requestBody: jsonbody.schema as OpenAPIV3.SchemaObject,
+          },
+        };
+        requestBodySchema.required = [];
+        if (_.keys(requestBody.content).length === 1) {
+          // if application/json is the only specified format, it's required
+          requestBodySchema.required.push('requestBody');
+        }
+        // add compiled params schema to schemas for this operation id
+        validateFunction = this.compileSchema(requestBodyValidator, requestBodySchema);
+      }
+      validators.push(validateFunction);
     }
 
     // schema for operation parameters in: path,query,header,cookie
@@ -576,7 +575,7 @@ export class OpenAPIValidator {
 
     // add compiled params schema to requestValidators for this operation id
     const paramsValidator = this.getAjv(ValidationContext.Params, { coerceTypes: true });
-		validators.push(this.compileSchema(paramsValidator, paramsSchema));
+    validators.push(this.compileSchema(paramsValidator, paramsSchema));
     this.requestValidators[operationId] = validators;
   }
 
@@ -719,7 +718,7 @@ export class OpenAPIValidator {
         return null;
       });
 
-      validateFns[SetMatchType.Any] = this.compileSchema(validator, ({
+      validateFns[SetMatchType.Any] = this.compileSchema(validator, {
         type: 'object',
         properties: {
           headers: {
@@ -729,9 +728,9 @@ export class OpenAPIValidator {
             required: [],
           },
         },
-      }));
+      });
 
-      validateFns[SetMatchType.Superset] = this.compileSchema(validator, ({
+      validateFns[SetMatchType.Superset] = this.compileSchema(validator, {
         type: 'object',
         properties: {
           headers: {
@@ -741,9 +740,9 @@ export class OpenAPIValidator {
             required,
           },
         },
-      }));
+      });
 
-      validateFns[SetMatchType.Subset] = this.compileSchema(validator, ({
+      validateFns[SetMatchType.Subset] = this.compileSchema(validator, {
         type: 'object',
         properties: {
           headers: {
@@ -753,9 +752,9 @@ export class OpenAPIValidator {
             required: [],
           },
         },
-      }));
+      });
 
-      validateFns[SetMatchType.Exact] = this.compileSchema(validator, ({
+      validateFns[SetMatchType.Exact] = this.compileSchema(validator, {
         type: 'object',
         properties: {
           headers: {
@@ -765,7 +764,7 @@ export class OpenAPIValidator {
             required,
           },
         },
-      }));
+      });
 
       headerValidators[status] = validateFns;
       return null;

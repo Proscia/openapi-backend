@@ -82,7 +82,6 @@ export interface Options {
  * @class OpenAPIBackend
  */
 export class OpenAPIBackend {
-
   public apiRoot: string;
   public initalized: boolean;
   public validate: boolean | BoolPredicate;
@@ -107,9 +106,9 @@ export class OpenAPIBackend {
   public securityHandlers: { [name: string]: Handler };
 
   public router: OpenAPIRouter;
-	public validator: OpenAPIValidator;
+  public validator: OpenAPIValidator;
 
-	public definition: OpenAPIDefinition;
+  public definition: OpenAPIDefinition;
 
   /**
    * Creates an instance of OpenAPIBackend.
@@ -130,17 +129,17 @@ export class OpenAPIBackend {
       securityHandlers: {},
       ...opts,
     };
-		this.apiRoot = optsWithDefaults.apiRoot;
-		this.definition = new OpenAPIDefinition({
-			definition: opts.definition,
-			strict: optsWithDefaults.strict,
-			quick: optsWithDefaults.quick
-		});
+    this.apiRoot = optsWithDefaults.apiRoot;
+    this.definition = new OpenAPIDefinition({
+      definition: opts.definition,
+      strict: optsWithDefaults.strict,
+      quick: optsWithDefaults.quick,
+    });
     this.validate = optsWithDefaults.validate;
     this.handlers = { ...optsWithDefaults.handlers }; // Copy to avoid mutating passed object
     this.securityHandlers = { ...optsWithDefaults.securityHandlers }; // Copy to avoid mutating passed object
     this.ajvOpts = optsWithDefaults.ajvOpts;
-		this.customizeAjv = optsWithDefaults.customizeAjv;
+    this.customizeAjv = optsWithDefaults.customizeAjv;
   }
 
   /**
@@ -158,8 +157,7 @@ export class OpenAPIBackend {
    * @memberof OpenAPIBackend
    */
   public async init() {
-
-		await this.definition.init();
+    await this.definition.init();
 
     this.router = new OpenAPIRouter({ definition: this.definition, apiRoot: this.apiRoot });
 
@@ -190,8 +188,6 @@ export class OpenAPIBackend {
     // return this instance
     return this;
   }
-
-
 
   /**
    * Handles a request
@@ -474,7 +470,7 @@ export class OpenAPIBackend {
     let status = 200;
     const defaultMock = {};
 
-		const operation = this.router.getOperation(operationId, true);
+    const operation = this.router.getOperation(operationId, true);
     if (!operation || !operation.responses) {
       return { status, mock: defaultMock };
     }
@@ -526,7 +522,7 @@ export class OpenAPIBackend {
       const exampleObject = examples[Object.keys(examples)[0]] as OpenAPIV3.ExampleObject;
       return { status, mock: exampleObject.value };
     }
-		// mock using json schema
+    // mock using json schema
     if (schema) {
       return { status, mock: mock(schema as OpenAPIV3.SchemaObject) };
     }

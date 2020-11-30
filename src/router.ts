@@ -51,8 +51,7 @@ export interface ParsedRequest extends Request {
  * @class OpenAPIRouter
  */
 export class OpenAPIRouter {
-
-	public definition: OpenAPIDefinition;
+  public definition: OpenAPIDefinition;
   public apiRoot: string;
 
   /**
@@ -63,11 +62,8 @@ export class OpenAPIRouter {
    * @param {string} opts.apiRoot - the root URI of the api. all paths are matched relative to apiRoot
    * @memberof OpenAPIRouter
    */
-  constructor(opts: { 
-		definition: OpenAPIDefinition; 
-		apiRoot?: string;
-	}) {
-		this.definition = opts.definition;
+  constructor(opts: { definition: OpenAPIDefinition; apiRoot?: string }) {
+    this.definition = opts.definition;
     this.apiRoot = opts.apiRoot || '/';
   }
 
@@ -97,7 +93,7 @@ export class OpenAPIRouter {
     // get relative path
     const normalizedPath = this.normalizePath(req.path);
 
-		// get all operations matching exact path
+    // get all operations matching exact path
     const exactPathMatches = _.filter(this.getOperations(true), ({ path }) => path === normalizedPath);
 
     // check if there's one with correct method and return if found
@@ -148,7 +144,7 @@ export class OpenAPIRouter {
    * @memberof OpenAPIRouter
    */
   public getOperations(dereferenced: boolean = false): Operation[] {
-		const definition = dereferenced ? this.definition.documentDereferenced : this.definition.document;
+    const definition = dereferenced ? this.definition.documentDereferenced : this.definition.document;
     const paths = _.get(definition, 'paths', {});
     return _.chain(paths)
       .entries()

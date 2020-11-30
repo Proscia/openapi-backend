@@ -14,14 +14,13 @@ export interface Options {
 }
 
 export class OpenAPIDefinition {
-	public document: Document;
-	public documentDereferenced: Document;
+  public document: Document;
+  public documentDereferenced: Document;
   public inputDocument: Document | string;
   public $refs: SwaggerParser.$Refs;
 
   public strict: boolean;
   public quick: boolean;
-
 
   /**
    * Creates an instance of OpenAPIBackend.
@@ -32,7 +31,7 @@ export class OpenAPIDefinition {
    * @param {boolean} opts.quick - quick startup, attempts to optimise startup; might break things (default: false)
    * @memberof OpenAPIBackend
    */
-  constructor(opts: Options){
+  constructor(opts: Options) {
     this.inputDocument = opts.definition;
     this.strict = opts.strict || false;
     this.quick = opts.quick || false;
@@ -44,7 +43,7 @@ export class OpenAPIDefinition {
    * @memberof OpenAPIBackend
    */
   public async loadDocument() {
-		this.document = (await SwaggerParser.parse(this.inputDocument)) as Document;
+    this.document = (await SwaggerParser.parse(this.inputDocument)) as Document;
     return this.document;
   }
 
@@ -64,7 +63,7 @@ export class OpenAPIDefinition {
     return this.document;
   }
 
-  public async init(){
+  public async init() {
     try {
       // parse the document
       if (this.quick) {
@@ -79,10 +78,12 @@ export class OpenAPIDefinition {
         this.validateDefinition();
       }
 
-			// dereference the document into definition (make sure not to copy)
-			this.documentDereferenced = await SwaggerParser.dereference(_.cloneDeep(this.document || this.inputDocument)) as Document;
-			this.$refs = await SwaggerParser.resolve(_.cloneDeep(this.document || this.inputDocument));
-		} catch (err) {
+      // dereference the document into definition (make sure not to copy)
+      this.documentDereferenced = (await SwaggerParser.dereference(
+        _.cloneDeep(this.document || this.inputDocument),
+      )) as Document;
+      this.$refs = await SwaggerParser.resolve(_.cloneDeep(this.document || this.inputDocument));
+    } catch (err) {
       if (this.strict) {
         // in strict-mode, fail hard and re-throw the error
         throw err;
@@ -91,6 +92,5 @@ export class OpenAPIDefinition {
         console.warn(err);
       }
     }
-
   }
 }

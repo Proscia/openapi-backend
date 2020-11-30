@@ -104,8 +104,7 @@ describe('OpenAPIBackend', () => {
     await api.init();
     expect(api.initalized).toEqual(true);
     expect(api.router.getOperations()).toHaveLength(8);
-	});
-
+  });
 
   test('can be initalised using a valid JSON file', async () => {
     // @TODO: read a complex document with as many features as possible here
@@ -113,33 +112,36 @@ describe('OpenAPIBackend', () => {
     await api.init();
     expect(api.initalized).toEqual(true);
     expect(api.router.getOperations()).toHaveLength(8);
-	});
+  });
 
   test('can consume APIs with circular references', async () => {
-		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });		
+    const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });
     await api.init();
-		expect(api.initalized).toEqual(true);
-		
-		const operation = api.getOperation('getItems', true);
-		const param = operation?.parameters?.find((param) => 'name' in param && param.name === 'filter') as OpenAPIV3.ParameterObject;
-		const schema = param.schema as OpenAPIV3.SchemaObject;
-		const hasResolved = 'anyOf' in schema;
-		expect(hasResolved).toEqual(true);
-	});
+    expect(api.initalized).toEqual(true);
+
+    const operation = api.getOperation('getItems', true);
+    const param = operation?.parameters?.find(
+      (param) => 'name' in param && param.name === 'filter',
+    ) as OpenAPIV3.ParameterObject;
+    const schema = param.schema as OpenAPIV3.SchemaObject;
+    const hasResolved = 'anyOf' in schema;
+    expect(hasResolved).toEqual(true);
+  });
 
   test('can consume APIs with remote references', async () => {
-		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });		
+    const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });
     await api.init();
-		expect(api.initalized).toEqual(true);
-		
-		const operation = api.getOperation('getItems', true);
-		const param = operation?.parameters?.find((param) => 'name' in param && param.name === 'remoteReference') as OpenAPIV3.ParameterObject;
-		const schema = param.schema as OpenAPIV3.SchemaObject;
-		const hasResolved = schema.title === 'PetId';
+    expect(api.initalized).toEqual(true);
 
-		expect(hasResolved).toEqual(true);
-	});
+    const operation = api.getOperation('getItems', true);
+    const param = operation?.parameters?.find(
+      (param) => 'name' in param && param.name === 'remoteReference',
+    ) as OpenAPIV3.ParameterObject;
+    const schema = param.schema as OpenAPIV3.SchemaObject;
+    const hasResolved = schema.title === 'PetId';
 
+    expect(hasResolved).toEqual(true);
+  });
 
   test('throws an error when initalised with an invalid document in strict mode', async () => {
     const invalid: any = { invalid: 'not openapi' };
@@ -174,7 +176,7 @@ describe('OpenAPIBackend', () => {
     expect(handlers['getPets']).toBeUndefined();
 
     // Verify that passed securityHandlers object is not mutated (even though using Object.freeze already verifies this)
-    api.registerSecurityHandler('basicAuth', dummyHandler)
+    api.registerSecurityHandler('basicAuth', dummyHandler);
     expect(api.securityHandlers['basicAuth']).toBeDefined();
     expect(securityHandlers['basicAuth']).toBeUndefined();
   });
@@ -226,8 +228,8 @@ describe('OpenAPIBackend', () => {
   });
 
   describe('.registerSecurityHandler', () => {
-		const api = new OpenAPIBackend({ definition });
-		
+    const api = new OpenAPIBackend({ definition });
+
     beforeAll(async () => await api.init());
 
     const dummyHandler = jest.fn();
@@ -314,7 +316,7 @@ describe('OpenAPIBackend', () => {
 
     describe('auth', () => {
       test('calls registered security handlers', async () => {
-				const api = new OpenAPIBackend({ definition });
+        const api = new OpenAPIBackend({ definition });
         api.register('notImplemented', () => 'dummyResponse');
 
         const dummyHandler = jest.fn(() => 'dummyResponse');
