@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Circular Refs",
+    "title": "Circular References",
     "description": "API with circular references",
     "version": "1.0.0"
   },
@@ -13,7 +13,7 @@
         "description": "Returns all items in database",
         "responses": {
           "200": {
-            "description": "List of pets in database"
+            "description": "List of items"
           }
         },
         "parameters": [
@@ -25,16 +25,16 @@
             "schema": {
               "$ref": "#/components/schemas/FilterExpression"
             }
-          },
-          {
-            "name": "test",
-            "in": "query",
-            "description": "asdf",
-            "required": false,
-            "schema": {
-              "$ref": "__tests__/resources/example-pet-api.openapi.json#/components/schemas/PetId"
-            }
-          }
+					},
+					{
+						"name": "remoteReference",
+						"in": "query",
+						"description": "",
+						"required": false,
+						"schema": {
+							"$ref": "__tests__/resources/example-pet-api.openapi.json#/components/schemas/PetId"
+						}
+					}
         ]
       }
     }
@@ -51,12 +51,6 @@
             "items": {
               "$ref": "#/components/schemas/FilterExpressionValue"
             }
-          },
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
           }
         ]
       },

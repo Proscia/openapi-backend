@@ -289,7 +289,7 @@ describe('OpenAPIRouter', () => {
 		beforeEach(async () => {
 			const def = new OpenAPIDefinition({ definition });
 			await def.init();
-			api = new OpenAPIRouter({ definition: def });
+			api = new OpenAPIRouter({ definition: def, apiRoot: '/api' });
 		})
 
     test('matches GET /api as apiRoot', async () => {

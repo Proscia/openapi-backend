@@ -553,11 +553,12 @@ export class OpenAPIBackend {
    * Alias for: router.getOperation(operationId)
    *
    * @param {string} operationId
+   * @param {boolean} dereferenced Use the dereferenced version of the API definitions. Defaults to false.
    * @returns {Operation}
    * @memberof OpenAPIBackend
    */
-  public getOperation(operationId: string): Operation | undefined {
-    return this.router.getOperation(operationId);
+  public getOperation(operationId: string, dereferenced: boolean = false): Operation | undefined {
+    return this.router.getOperation(operationId, dereferenced);
   }
 
   /**

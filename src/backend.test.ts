@@ -105,15 +105,6 @@ describe('OpenAPIBackend', () => {
     expect(api.initalized).toEqual(true);
     expect(api.router.getOperations()).toHaveLength(8);
 	});
-	
-  test('can consume circular references', async () => {
-    // @TODO: read a complex document with as many features as possible here
-		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });
-		
-    await api.init();
-    expect(api.initalized).toEqual(true);
-    // expect(api.router.getOperations()).toHaveLength(8);
-  });
 
 
   test('can be initalised using a valid JSON file', async () => {
@@ -122,7 +113,33 @@ describe('OpenAPIBackend', () => {
     await api.init();
     expect(api.initalized).toEqual(true);
     expect(api.router.getOperations()).toHaveLength(8);
-  });
+	});
+
+  test('can consume APIs with circular references', async () => {
+		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });		
+    await api.init();
+		expect(api.initalized).toEqual(true);
+		
+		const operation = api.getOperation('getItems', true);
+		const param = operation?.parameters?.find((param) => 'name' in param && param.name === 'filter') as OpenAPIV3.ParameterObject;
+		const schema = param.schema as OpenAPIV3.SchemaObject;
+		const hasResolved = 'anyOf' in schema;
+		expect(hasResolved).toEqual(true);
+	});
+
+  test('can consume APIs with remote references', async () => {
+		const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });		
+    await api.init();
+		expect(api.initalized).toEqual(true);
+		
+		const operation = api.getOperation('getItems', true);
+		const param = operation?.parameters?.find((param) => 'name' in param && param.name === 'remoteReference') as OpenAPIV3.ParameterObject;
+		const schema = param.schema as OpenAPIV3.SchemaObject;
+		const hasResolved = schema.title === 'PetId';
+
+		expect(hasResolved).toEqual(true);
+	});
+
 
   test('throws an error when initalised with an invalid document in strict mode', async () => {
     const invalid: any = { invalid: 'not openapi' };

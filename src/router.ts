@@ -97,8 +97,8 @@ export class OpenAPIRouter {
     // get relative path
     const normalizedPath = this.normalizePath(req.path);
 
-    // get all operations matching exact path
-    const exactPathMatches = _.filter(this.getOperations(), ({ path }) => path === normalizedPath);
+		// get all operations matching exact path
+    const exactPathMatches = _.filter(this.getOperations(true), ({ path }) => path === normalizedPath);
 
     // check if there's one with correct method and return if found
     const exactMatch = _.find(exactPathMatches, ({ method }) => method === req.method);
@@ -107,7 +107,7 @@ export class OpenAPIRouter {
     }
 
     // check with path templates
-    const templatePathMatches = _.filter(this.getOperations(), ({ path }) => {
+    const templatePathMatches = _.filter(this.getOperations(true), ({ path }) => {
       // convert openapi path template to a regex pattern i.e. /{id}/ becomes /[^/]+/
       const pathPattern = `^${path.replace(/\{.*?\}/g, '[^/]+')}$`;
       return Boolean(normalizedPath.match(new RegExp(pathPattern, 'g')));
