@@ -436,7 +436,6 @@ export class OpenAPIBackend {
 
     // if initialized, check that operation matches a security scheme
     if (this.initalized) {
-			console.log(this.definition)
       const securitySchemes = this.definition.documentDereferenced.components?.securitySchemes || {};
       if (!securitySchemes[name]) {
         const err = `Unknown security scheme ${name}`;
@@ -476,7 +475,6 @@ export class OpenAPIBackend {
     const defaultMock = {};
 
 		const operation = this.router.getOperation(operationId, true);
-		console.log(operation);
     if (!operation || !operation.responses) {
       return { status, mock: defaultMock };
     }
@@ -495,7 +493,6 @@ export class OpenAPIBackend {
       status = res.status;
       response = res.res;
     }
-		console.log(response)
     if (!response || !response.content) {
       return { status, mock: defaultMock };
     }
@@ -529,8 +526,7 @@ export class OpenAPIBackend {
       const exampleObject = examples[Object.keys(examples)[0]] as OpenAPIV3.ExampleObject;
       return { status, mock: exampleObject.value };
     }
-		console.log(schema)
-    // mock using json schema
+		// mock using json schema
     if (schema) {
       return { status, mock: mock(schema as OpenAPIV3.SchemaObject) };
     }

@@ -148,7 +148,7 @@ export class OpenAPIRouter {
    * @memberof OpenAPIRouter
    */
   public getOperations(dereferenced: boolean = false): Operation[] {
-		const definition = dereferenced ? this.definition.document : this.definition.document;
+		const definition = dereferenced ? this.definition.documentDereferenced : this.definition.document;
     const paths = _.get(definition, 'paths', {});
     return _.chain(paths)
       .entries()

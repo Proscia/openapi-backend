@@ -1,6 +1,7 @@
 import { OpenAPIRouter, Operation } from './router';
 import { OpenAPIBackend, Context } from './backend';
 import { OpenAPIV3 } from 'openapi-types';
+import { OpenAPIDefinition } from './definition';
 
 const headers = { accept: 'application/json' };
 
@@ -104,7 +105,12 @@ const definition: OpenAPIV3.Document = {
 
 describe('OpenAPIRouter', () => {
   describe('.parseRequest', () => {
-    const api = new OpenAPIRouter({ definition });
+		let api: OpenAPIRouter;
+		beforeEach(async () => {
+			const def = new OpenAPIDefinition({ definition });
+			await def.init();
+			api = new OpenAPIRouter({ definition: def });
+		})
 
     test('parses requests', () => {
       const request = { path: '/', method: 'get', headers };
@@ -215,7 +221,12 @@ describe('OpenAPIRouter', () => {
   });
 
   describe('.matchOperation', () => {
-    const api = new OpenAPIRouter({ definition });
+		let api: OpenAPIRouter;
+		beforeEach(async () => {
+			const def = new OpenAPIDefinition({ definition });
+			await def.init();
+			api = new OpenAPIRouter({ definition: def });
+		})
 
     test('matches GET /', async () => {
       const { operationId } = api.matchOperation({ path: '/', method: 'get', headers }) as Operation;
@@ -274,7 +285,12 @@ describe('OpenAPIRouter', () => {
   });
 
   describe('.matchOperation with apiRoot = /api', () => {
-    const api = new OpenAPIRouter({ definition, apiRoot: '/api' });
+		let api: OpenAPIRouter;
+		beforeEach(async () => {
+			const def = new OpenAPIDefinition({ definition });
+			await def.init();
+			api = new OpenAPIRouter({ definition: def });
+		})
 
     test('matches GET /api as apiRoot', async () => {
       const { operationId } = api.matchOperation({ path: '/api', method: 'get', headers }) as Operation;
@@ -293,7 +309,12 @@ describe('OpenAPIRouter', () => {
   });
 
   describe('.matchOperation with strict mode', () => {
-    const api = new OpenAPIRouter({ definition });
+		let api: OpenAPIRouter;
+		beforeEach(async () => {
+			const def = new OpenAPIDefinition({ definition });
+			await def.init();
+			api = new OpenAPIRouter({ definition: def });
+		})
 
     test('matches GET /', async () => {
       const { operationId } = api.matchOperation({ path: '/', method: 'get', headers }, true);
