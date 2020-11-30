@@ -136,7 +136,6 @@ export class OpenAPIValidator {
   public responseHeadersValidators: { [operationId: string]: ResponseHeadersValidateFunctionMap };
 
   public router: OpenAPIRouter;
-  public $refs: $Refs | undefined;
 
   /**
    * Creates an instance of OpenAPIValidation
@@ -152,9 +151,7 @@ export class OpenAPIValidator {
     ajvOpts?: Ajv.Options;
     router?: OpenAPIRouter;
     customizeAjv?: AjvCustomizer;
-    $refs?: $Refs
   }) {
-    this.$refs = opts.$refs;
     this.definition = opts.definition;
     this.ajvOpts = {
       unknownFormats: 'ignore', // Ajv default behaviour is to throw an error when encountering an unknown format
@@ -448,36 +445,34 @@ export class OpenAPIValidator {
 	 */
   private compileSchema(ajv: Ajv.Ajv, schema: any){
 		let schemaToCompile = schema;
-		if(this.$refs){
-			// console.log(this.$refs.get(''));
-			const refSchemas = this.$refs.values();
+		const refSchemas = this.definition.$refs.values();
 
-			// Find base schema key so we can add other keys
-			let baseSchema = this.$refs.get('');
-			let baseSchemaKey = '';
-			for(const key in refSchemas){
-				const refSchema = refSchemas[key];
-				if(refSchema === baseSchema){
-					baseSchemaKey = key;
-					break;
-				}
+		// Find base schema key so we can add other keys
+		let baseSchema = this.definition.$refs.get('');
+		let baseSchemaKey = '';
+		for(const key in refSchemas){
+			const refSchema = refSchemas[key];
+			if(refSchema === baseSchema){
+				baseSchemaKey = key;
+				break;
 			}
+		}
 
-			for(const key in refSchemas){
-				const refSchema = refSchemas[key];
-				if(key !== baseSchemaKey){
-					const ajvKey = key.replace(baseSchemaKey, '');
-					ajv.removeSchema(ajvKey);
-					ajv.addSchema(refSchema, ajvKey);
-				}
+		for(const key in refSchemas){
+			const refSchema = refSchemas[key];
+			if(key !== baseSchemaKey){
+				const ajvKey = key.replace(baseSchemaKey, '');
+				ajv.removeSchema(ajvKey);
+				ajv.addSchema(refSchema, ajvKey);
 			}
-			if(this.$refs.exists('#/components')){
-				schemaToCompile = {
-					...schema,
-					components: this.$refs.get('#/components')
-				}
+		}
+		if(this.definition.$refs.exists('#/components')){
+			schemaToCompile = {
+				...schema,
+				components: this.definition.$refs.get('#/components')
 			}
-    }
+		}
+	
 		return ajv.compile(schemaToCompile);
   }
 

@@ -2,9 +2,9 @@ import { OpenAPIV3 } from 'openapi-types';
 import * as SwaggerParser from '@apidevtools/swagger-parser';
 import OpenAPISchemaValidator from 'openapi-schema-validator';
 import * as _ from 'lodash';
+import { type } from 'os';
 
 // alias Document to OpenAPIV3.Document
-// ??
 export type Document = OpenAPIV3.Document;
 
 export interface Options {
@@ -82,7 +82,7 @@ export class OpenAPIDefinition {
 			// dereference the document into definition (make sure not to copy)
 			this.documentDereferenced = await SwaggerParser.dereference(_.cloneDeep(this.document || this.inputDocument)) as Document;
 			this.$refs = await SwaggerParser.resolve(_.cloneDeep(this.document || this.inputDocument));
-    } catch (err) {
+		} catch (err) {
       if (this.strict) {
         // in strict-mode, fail hard and re-throw the error
         throw err;
