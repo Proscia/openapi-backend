@@ -119,27 +119,12 @@ describe('OpenAPIBackend', () => {
     await api.init();
     expect(api.initalized).toEqual(true);
 
-    const operation = api.getOperation('getItems', true);
+    const operation = api.getOperation('getTrees', true);
     const param = operation?.parameters?.find(
-      (param) => 'name' in param && param.name === 'filter',
+      (param) => 'name' in param && param.name === 'subtree',
     ) as OpenAPIV3.ParameterObject;
     const schema = param.schema as OpenAPIV3.SchemaObject;
-    const hasResolved = 'anyOf' in schema;
-    expect(hasResolved).toEqual(true);
-  });
-
-  test('can consume APIs with remote references', async () => {
-    const api = new OpenAPIBackend({ definition: refsAPIJSON, strict: true });
-    await api.init();
-    expect(api.initalized).toEqual(true);
-
-    const operation = api.getOperation('getItems', true);
-    const param = operation?.parameters?.find(
-      (param) => 'name' in param && param.name === 'remoteReference',
-    ) as OpenAPIV3.ParameterObject;
-    const schema = param.schema as OpenAPIV3.SchemaObject;
-    const hasResolved = schema.title === 'PetId';
-
+    const hasResolved = schema.title === 'BinTree';
     expect(hasResolved).toEqual(true);
   });
 

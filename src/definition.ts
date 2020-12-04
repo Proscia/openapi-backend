@@ -3,6 +3,7 @@ import * as SwaggerParser from '@apidevtools/swagger-parser';
 import OpenAPISchemaValidator from 'openapi-schema-validator';
 import * as _ from 'lodash';
 import { type } from 'os';
+import { Ajv } from 'ajv';
 
 // alias Document to OpenAPIV3.Document
 export type Document = OpenAPIV3.Document;
@@ -17,7 +18,7 @@ export class OpenAPIDefinition {
   public document: Document;
   public documentDereferenced: Document;
   public inputDocument: Document | string;
-  public $refs: SwaggerParser.$Refs;
+	private $refs: SwaggerParser.$Refs;
 
   public strict: boolean;
   public quick: boolean;
@@ -34,7 +35,7 @@ export class OpenAPIDefinition {
   constructor(opts: Options) {
     this.inputDocument = opts.definition;
     this.strict = opts.strict || false;
-    this.quick = opts.quick || false;
+		this.quick = opts.quick || false;
   }
 
   /**
@@ -92,5 +93,72 @@ export class OpenAPIDefinition {
         console.warn(err);
       }
     }
-  }
+	}
+	
+	/**
+	 * Returns just the URI of a JSON $ref
+	 * @param ref A JSON $ref string
+	 */
+	private static getRefUri(ref: string): string{
+		return ref.substring(0, ref.indexOf('#'));
+	}
+
+	/**
+	 * Gets the schemaKey used in Ajv for a URI
+	 * @param ref A JSON $ref string
+	 * @param parentUri the URI of the schema in which this $ref is used
+	 */
+	public getRefSchemaKey(ref: string, parentUri: string): string{
+		let uri = OpenAPIDefinition.getRefUri(ref);
+		if(uri === '') uri = parentUri;
+
+		const schema = this.$refs.get(uri);
+		for(let key in this.$refs.values()){
+			if(schema === this.$refs.get(key)) return key;
+		}
+		throw new Error(`$ref path not found for: ${ref} (parentUri: '${parentUri}')`);
+	}
+
+	/**
+	 * Recursively changes the Uris of $ref values in a schema to the refSchemaKeys used by Ajv 
+	 * @param node a value within a schema object to alter
+	 * @param parentUri the URI of the reference schema. Used for namespacing the ref string.
+	 */
+	private replaceUris(node: any, parentUri: string = ''): void{
+		if(typeof(node) !== 'object') return;	
+		for(let key of _.keys(node)){
+			if(key === '$ref'){
+				const ref = node[key] as string;
+				const refSchemaKey = this.getRefSchemaKey(ref, parentUri);
+				const uri = OpenAPIDefinition.getRefUri(ref);
+				node[key] = `${refSchemaKey}${ref.substring(uri.length)}`;
+			}else{
+				this.replaceUris(node[key], parentUri);
+			}
+		}
+	}
+
+	/**
+	 * Returns a schema with $ref URIs substituted for refSchemaKeys. Also dereferences a $ref at the root if it exists.
+	 * This is necessary for Ajv to be able to dereference $refs witin the schema.
+	 * @param ref a ref used in the definition document
+	 */
+	public getAjvSchema(schema: any): any {
+		schema = _.cloneDeep(schema);
+		let rootUri = '';
+		if('$ref' in schema){
+			rootUri = OpenAPIDefinition.getRefUri(schema.$ref);
+			schema = this.$refs.get(schema.$ref);
+		}
+		this.replaceUris(schema, rootUri);
+		return schema;
+	}
+
+	/**
+	 * Adds reference schemas to Ajv so they $refs can be dereferenced.
+	 * @param ajv Ajv instance which is being used to compile a schema
+	 */
+	public addRefSchemas(ajv: Ajv): void{
+		_.forEach(this.$refs.values(), (refSchema, key) => ajv.addSchema(refSchema, key));
+	}
 }

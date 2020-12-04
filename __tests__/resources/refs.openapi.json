@@ -6,34 +6,25 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/items": {
+    "/trees": {
       "get": {
-        "operationId": "getItems",
-        "summary": "List items",
-        "description": "Returns all items in database",
+        "operationId": "getTrees",
+        "summary": "List trees",
+        "description": "Returns all trees in database",
         "responses": {
           "200": {
-            "description": "List of items"
+            "description": "List of trees"
           }
         },
         "parameters": [
           {
-            "name": "filter",
+            "name": "subtree",
             "in": "query",
-            "description": "Filter items by FilterExpression",
+            "description": "Filter trees by existance of a subtree",
             "required": false,
             "schema": {
-              "$ref": "#/components/schemas/FilterExpression"
+              "$ref": "#/components/schemas/BinTree"
             }
-					},
-					{
-						"name": "remoteReference",
-						"in": "query",
-						"description": "",
-						"required": false,
-						"schema": {
-							"$ref": "__tests__/resources/example-pet-api.openapi.json#/components/schemas/PetId"
-						}
 					}
         ]
       }
@@ -41,32 +32,33 @@
   },
   "components": {
     "schemas": {
-      "FilterExpression": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/FilterExpressionValue"
-          },
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/FilterExpressionValue"
-            }
-          }
-        ]
-      },
-      "FilterExpressionValue": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/FilterExpression"
-          },
-          {
-            "type": "string"
-          },
-          {
-            "type": "number"
-          }
-        ]
-      }
-    }
+			"BinTree": {
+				"title": "BinTree",
+				"type": "object",
+				"nullable": true,
+				"properties": {
+					"left": { 
+						"nullable": true,
+						"allOf": [{ "$ref": "#/components/schemas/BinTree" }]
+					},
+					"right": { 
+						"nullable": true,
+						"allOf": [{ "$ref": "#/components/schemas/BinTree" }]
+					},
+					"value": {
+						"type": "number"
+					}
+				}
+			}
+		},
+		"requestBodies": {
+			"CreateTree": {
+				"content": {
+					"application/json": {
+						"schema": { "$ref": "#/components/schemas/BinTree" }
+					}
+				}
+			}
+		}
   }
 }

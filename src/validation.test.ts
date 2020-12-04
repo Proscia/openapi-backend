@@ -436,13 +436,20 @@ describe('OpenAPIValidator', () => {
                     },
                   },
                 },
+							},
+              '/trees': {
+                post: {
+                  operationId: 'createTree',
+                  responses: { 200: { description: 'ok' } },
+                  requestBody: { $ref: `./__tests__/resources/refs.openapi.json#/components/requestBodies/CreateTree` },
+                },
               },
             },
           },
         });
         await definition.init();
         validator = new OpenAPIValidator({ definition });
-      });
+			});
       test('passes validation for POST /pets with full object', async () => {
         const valid = validator.validateRequest({
           path: '/pets',
@@ -479,7 +486,47 @@ describe('OpenAPIValidator', () => {
           },
         });
         expect(valid.errors).toBeFalsy();
-      });
+			});
+			
+			test('passes validation for POST /trees with tree of numbers (recursive structure)', async () =>{
+				const valid = validator.validateRequest({
+          path: '/trees',
+          method: 'post',
+          headers,
+          body: {
+						left: {
+							left: null,
+							right: null,
+							value: 0
+						},
+						right: {
+							left: null,
+							right: {
+								left: null,
+								right: null,
+								value: 3
+							},
+							value: 2
+						},
+						value: 1
+          },
+        });
+        expect(valid.errors).toBeFalsy();
+			}),
+
+			test('fails validation for POST /trees with tree of strings (recursive structure)', async () =>{
+				const valid = validator.validateRequest({
+          path: '/trees',
+          method: 'post',
+          headers,
+          body: {
+						left: null,
+						right: null,
+						value: 'not a number'
+          },
+        });
+        expect(valid.errors).toHaveLength(1);
+			}),
 
       test('fails validation for POST /pets with age only', async () => {
         const valid = validator.validateRequest({
